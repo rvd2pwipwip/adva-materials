@@ -58,8 +58,39 @@ class AuthenticationInterceptor @Inject constructor(
   }
 
   override fun intercept(chain: Interceptor.Chain): Response {
-    // Replace with your code
-    return chain.proceed(chain.request())
+    val token = preferences.getToken() // 1
+    val tokenExpirationTime =
+            Instant.ofEpochSecond(preferences.getTokenExpirationTime()) // 2
+    val request = chain.request() // 3
+
+// if (chain.request().headers[NO_AUTH_HEADER] != null) return chain.proceed(request) // 4
+
+    val interceptedRequest: Request // 1
+
+    if (tokenExpirationTime.isAfter(Instant.now())) {
+      interceptedRequest =
+              chain.createAuthenticatedRequest(token) // 2
+    } else {
+      val tokenRefreshResponse = chain.refreshToken() // 1
+
+      interceptedRequest = if (tokenRefreshResponse.isSuccessful) { // 2
+        val newToken = mapToken(tokenRefreshResponse) // 3
+
+        if (newToken.isValid()) { // 4
+          storeNewToken(newToken)
+          chain.createAuthenticatedRequest(newToken.accessToken!!)
+        } else {
+          request
+        }
+      } else {
+        request
+      }
+
+    }
+
+    return chain
+            .proceedDeletingTokenIfUnauthorized(interceptedRequest) // 3
+
   }
 
   private fun Interceptor.Chain.createAuthenticatedRequest(token: String): Request {

@@ -33,7 +33,7 @@
  */
 
 package com.raywenderlich.android.petsave.common.data.api.model.mappers
-/**
+
 import com.raywenderlich.android.petsave.common.data.api.model.ApiAnimal
 import com.raywenderlich.android.petsave.common.domain.model.animal.AdoptionStatus
 import com.raywenderlich.android.petsave.common.domain.model.animal.Media
@@ -54,6 +54,20 @@ class ApiAnimalMapper @Inject constructor(
 ): ApiMapper<ApiAnimal, AnimalWithDetails> {
 
   // Add code here
+  override fun mapToDomain(apiEntity: ApiAnimal): AnimalWithDetails {
+    return AnimalWithDetails(
+            id = apiEntity.id
+                    ?: throw MappingException("Animal ID cannot be null"),  // 1
+            name = apiEntity.name.orEmpty(), // 2
+            type = apiEntity.type.orEmpty(),
+            details = parseAnimalDetails(apiEntity), // 3
+            media = mapMedia(apiEntity),
+            tags = apiEntity.tags.orEmpty().map { it.orEmpty() },
+            adoptionStatus = parseAdoptionStatus(apiEntity.status),
+            publishedAt =
+            DateTimeUtils.parse(apiEntity.publishedAt.orEmpty()) // 4
+    )
+  }
 
   private fun parseAnimalDetails(apiAnimal: ApiAnimal): Details {
     return Details(
@@ -119,4 +133,3 @@ class ApiAnimalMapper @Inject constructor(
     )
   }
 }
-*/
